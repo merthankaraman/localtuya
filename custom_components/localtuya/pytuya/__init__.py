@@ -529,8 +529,14 @@ class TuyaListener(ABC):
     """Listener interface for Tuya device changes."""
 
     @abstractmethod
-    def status_updated(self, status):
-        """Device updated status."""
+    def status_updated(self, status, updated_dps=None, event_time=None):
+        """Device updated status.
+
+        Args:
+            status: Full DPS cache after applying this update.
+            updated_dps: DPS dict from this message only (None = full/status poll).
+            event_time: Device message timestamp ``t`` when present.
+        """
 
     @abstractmethod
     def disconnected(self):
@@ -540,7 +546,7 @@ class TuyaListener(ABC):
 class EmptyListener(TuyaListener):
     """Listener doing nothing."""
 
-    def status_updated(self, status):
+    def status_updated(self, status, updated_dps=None, event_time=None):
         """Device updated status."""
 
     def disconnected(self):
@@ -620,12 +626,27 @@ class TuyaProtocol(asyncio.Protocol, ContextualLogger):
             if msg.seqno > 0:
                 self.seqno = msg.seqno + 1
             decoded_message = self._decode_payload(msg.payload)
-            if "dps" in decoded_message:
-                self.dps_cache.update(decoded_message["dps"])
+            updated_dps = None
+            event_time = None
+            if isinstance(decoded_message, dict):
+                event_time = decoded_message.get("t")
+                data = decoded_message.get("data")
+                if isinstance(data, dict):
+                    if event_time is None:
+                        event_time = data.get("t")
+                    if "dps" in data and "dps" not in decoded_message:
+                        decoded_message = data
+                if "dps" in decoded_message:
+                    updated_dps = decoded_message["dps"]
+                    self.dps_cache.update(updated_dps)
 
             listener = self.listener and self.listener()
             if listener is not None:
-                listener.status_updated(self.dps_cache)
+                listener.status_updated(
+                    self.dps_cache,
+                    updated_dps=updated_dps,
+                    event_time=event_time,
+                )
 
         return MessageDispatcher(
             self.id, _status_update, self.version, self.local_key, enable_debug

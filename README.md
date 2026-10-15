@@ -149,6 +149,7 @@ Setup tips:
 * Totals are restored after Home Assistant restarts (`total_increasing` / Energy dashboard compatible).
 * To clear the accumulated total, call service `localtuya.reset_energy` with the sensor `entity_id`.
 * To set a starting kWh value, call service `localtuya.set_energy` with `entity_id` and `value`.
+* Pulses are counted when DP `add_ele` appears in a device message (even if the raw value is unchanged). The device message timestamp `t` is used to avoid double-counting; initial status polls do not add.
 
 ```yaml
        sensor:

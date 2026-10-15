@@ -341,14 +341,19 @@ class TuyaDevice(pytuya.TuyaListener, pytuya.ContextualLogger):
             )
 
     @callback
-    def status_updated(self, status):
+    def status_updated(self, status, updated_dps=None, event_time=None):
         """Device updated status."""
         self._status.update(status)
-        self._dispatch_status()
+        self._dispatch_status(updated_dps=updated_dps, event_time=event_time)
 
-    def _dispatch_status(self):
+    def _dispatch_status(self, updated_dps=None, event_time=None):
         signal = f"localtuya_{self._dev_config_entry[CONF_DEVICE_ID]}"
-        async_dispatcher_send(self._hass, signal, self._status)
+        payload = {
+            "dps": self._status,
+            "updated_dps": updated_dps,
+            "event_time": event_time,
+        }
+        async_dispatcher_send(self._hass, signal, payload)
 
     @callback
     def disconnected(self):
@@ -379,6 +384,8 @@ class LocalTuyaEntity(RestoreEntity, pytuya.ContextualLogger):
         self._status = {}
         self._state = None
         self._last_state = None
+        self._updated_dps = None
+        self._event_time = None
 
         # Default value is available to be provided by Platform entities if required
         self._default_value = self._config.get(CONF_DEFAULT_VALUE)
@@ -403,17 +410,38 @@ class LocalTuyaEntity(RestoreEntity, pytuya.ContextualLogger):
         if state:
             self.status_restored(state)
 
-        def _update_handler(status):
+        def _update_handler(payload):
             """Update entity state when status was updated."""
-            if status is None:
-                status = {}
-            if self._status != status:
-                self._status = status.copy()
-                if status:
-                    self.status_updated()
-
-                # Update HA
+            if payload is None:
+                self._status = {}
+                self._updated_dps = None
+                self._event_time = None
                 self.schedule_update_ha_state()
+                return
+
+            # Legacy: plain DPS dict. New: {dps, updated_dps, event_time}
+            if isinstance(payload, dict) and "dps" in payload:
+                status = payload.get("dps") or {}
+                updated_dps = payload.get("updated_dps")
+                event_time = payload.get("event_time")
+            else:
+                status = payload or {}
+                updated_dps = None
+                event_time = None
+
+            status_changed = self._status != status
+            dp_in_packet = False
+            if updated_dps is not None:
+                dp_in_packet = str(self._dp_id) in {str(k) for k in updated_dps}
+
+            self._status = status.copy()
+            self._updated_dps = updated_dps
+            self._event_time = event_time
+
+            if status and (status_changed or dp_in_packet):
+                self.status_updated()
+
+            self.schedule_update_ha_state()
 
         signal = f"localtuya_{self._dev_config_entry[CONF_DEVICE_ID]}"
 

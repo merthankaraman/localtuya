@@ -51,6 +51,7 @@ class LocaltuyaSensor(LocalTuyaEntity):
         self._state = STATE_UNKNOWN
         self._total = 0.0
         self._last_raw = None
+        self._last_event_time = None
         self._restored = False
 
     @property
@@ -143,6 +144,36 @@ class LocaltuyaSensor(LocalTuyaEntity):
             return raw * scale_factor
         return float(raw)
 
+    def _dp_in_packet(self):
+        """Return True if this sensor's DP was present in the last device message."""
+        if self._updated_dps is None:
+            return False
+        dp = str(self._dp_id)
+        return dp in {str(k) for k in self._updated_dps}
+
+    def _should_accumulate_pulse(self, raw):
+        """Decide if this add_ele report should be added to the total.
+
+        Cloud/local plugs may repeat the same Wh increment; a new packet (or
+        new device timestamp ``t``) means a new pulse even when the value is
+        unchanged. Full status polls pass updated_dps=None and never accumulate.
+        """
+        if not self._dp_in_packet():
+            return False
+
+        event_time = self._event_time
+        if event_time is not None:
+            if event_time == self._last_event_time:
+                return False
+            return True
+
+        # No timestamp: value change always counts
+        if raw != self._last_raw:
+            return True
+
+        # Same value: only count dedicated single-DP pushes (not multi-DP polls)
+        return len(self._updated_dps) == 1
+
     def _update_enerji(self, raw, scale_factor):
         """Accumulate add_ele incremental pulses into total kWh."""
         if raw is None or not isinstance(raw, (int, float)):
@@ -154,8 +185,18 @@ class LocaltuyaSensor(LocalTuyaEntity):
         if scaled is None:
             return
 
-        if scaled > 0 and raw != self._last_raw:
+        if scaled > 0 and self._should_accumulate_pulse(raw):
             self._total += scaled
+            if self._event_time is not None:
+                self._last_event_time = self._event_time
+            self.debug(
+                "add_ele pulse for %s: +%s (raw=%s, t=%s) total=%s",
+                self.name,
+                scaled,
+                raw,
+                self._event_time,
+                self._total,
+            )
 
         self._last_raw = raw
         self._total = float(self._total)
@@ -176,6 +217,7 @@ class LocaltuyaSensor(LocalTuyaEntity):
             return False
         self._total = total
         self._last_raw = None
+        self._last_event_time = None
         self._state = round(self._total, DEFAULT_PRECISION)
         self._last_state = self._state
         self._restored = True
