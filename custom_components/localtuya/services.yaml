@@ -13,3 +13,10 @@ set_dp:
     value:
       description: New value to set
       example: False
+
+reset_energy:
+  description: Reset accumulated local energy (sensor mode enerji) to zero
+  fields:
+    entity_id:
+      description: Energy sensor entity_id to reset
+      example: sensor.merthan_oda_ana_priz_enerji

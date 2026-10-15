@@ -88,11 +88,9 @@ CONF_SCALING = "scaling"
 CONF_SENSOR_MODE = "sensor_mode"
 SENSOR_MODE_NONE = "(none)"
 SENSOR_MODE_ENERJI = "enerji"
-SENSOR_MODE_INTEGRE_ENERJI = "integre enerji"
 SENSOR_MODES = [
     SENSOR_MODE_NONE,
     SENSOR_MODE_ENERJI,
-    SENSOR_MODE_INTEGRE_ENERJI,
 ]
 
 # climate

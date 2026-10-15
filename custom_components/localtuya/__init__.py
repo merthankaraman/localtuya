@@ -9,6 +9,7 @@ import homeassistant.helpers.entity_registry as er
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    ATTR_ENTITY_ID,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_DEVICE_ID,
@@ -63,6 +64,13 @@ SERVICE_SET_DP_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_RESET_ENERGY = "reset_energy"
+SERVICE_RESET_ENERGY_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+    }
+)
+
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the LocalTuya integration component."""
@@ -95,6 +103,21 @@ async def async_setup(hass: HomeAssistant, config: dict):
             raise HomeAssistantError("not connected to device")
 
         await device.set_dp(event.data[CONF_VALUE], event.data[CONF_DP])
+
+    async def _handle_reset_energy(call):
+        """Reset accumulated enerji-mode sensor total to zero."""
+        entity_id = call.data[ATTR_ENTITY_ID]
+        for device in hass.data[DOMAIN][TUYA_DEVICES].values():
+            for entity in device._entities:
+                if getattr(entity, "entity_id", None) != entity_id:
+                    continue
+                reset = getattr(entity, "async_reset_energy", None)
+                if reset is None or not reset():
+                    raise HomeAssistantError(
+                        f"{entity_id} is not an enerji-mode LocalTuya sensor"
+                    )
+                return
+        raise HomeAssistantError(f"unknown LocalTuya entity id: {entity_id}")
 
     def _device_discovered(device):
         """Update address of device if it has changed."""
@@ -172,6 +195,12 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
     hass.services.async_register(
         DOMAIN, SERVICE_SET_DP, _handle_set_dp, schema=SERVICE_SET_DP_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESET_ENERGY,
+        _handle_reset_energy,
+        schema=SERVICE_RESET_ENERGY_SCHEMA,
     )
 
     discovery = TuyaDiscovery(_device_discovered)

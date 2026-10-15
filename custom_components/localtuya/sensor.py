@@ -1,6 +1,5 @@
 """Platform to present any Tuya DP as a sensor."""
 import logging
-import time
 from functools import partial
 
 import voluptuous as vol
@@ -17,19 +16,13 @@ from .const import (
     CONF_SCALING,
     CONF_SENSOR_MODE,
     SENSOR_MODE_ENERJI,
-    SENSOR_MODE_INTEGRE_ENERJI,
     SENSOR_MODE_NONE,
     SENSOR_MODES,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_PRECISION = 2
-ATTR_POWER = "power"
-# Skip integration samples after long gaps (reconnect / HA restart)
-MAX_INTEGRATION_GAP_S = 300
-# W * s -> kWh
-WS_TO_KWH = 3_600_000.0
+DEFAULT_PRECISION = 3
 
 
 def flow_schema(dps):
@@ -59,8 +52,6 @@ class LocaltuyaSensor(LocalTuyaEntity):
         self._state = STATE_UNKNOWN
         self._total = 0.0
         self._last_raw = None
-        self._last_sample_ts = None
-        self._power_w = None
         self._restored = False
 
     @property
@@ -71,7 +62,7 @@ class LocaltuyaSensor(LocalTuyaEntity):
     @property
     def _is_energy_mode(self):
         """Return True if this sensor accumulates energy."""
-        return self._sensor_mode in (SENSOR_MODE_ENERJI, SENSOR_MODE_INTEGRE_ENERJI)
+        return self._sensor_mode == SENSOR_MODE_ENERJI
 
     @property
     def state(self):
@@ -107,14 +98,6 @@ class LocaltuyaSensor(LocalTuyaEntity):
             return True
         return super().available
 
-    @property
-    def extra_state_attributes(self):
-        """Return attributes saved for restore and optional power."""
-        attributes = super().extra_state_attributes
-        if self._sensor_mode == SENSOR_MODE_INTEGRE_ENERJI and self._power_w is not None:
-            attributes[ATTR_POWER] = self._power_w
-        return attributes
-
     def status_restored(self, stored_state):
         """Restore accumulated energy after HA restart."""
         super().status_restored(stored_state)
@@ -146,14 +129,9 @@ class LocaltuyaSensor(LocalTuyaEntity):
         """Device status was updated."""
         state = self.dps(self._dp_id)
         scale_factor = self._config.get(CONF_SCALING)
-        mode = self._sensor_mode
 
-        if mode == SENSOR_MODE_ENERJI:
+        if self._sensor_mode == SENSOR_MODE_ENERJI:
             self._update_enerji(state, scale_factor)
-            return
-
-        if mode == SENSOR_MODE_INTEGRE_ENERJI:
-            self._update_integre_enerji(state, scale_factor)
             return
 
         if scale_factor is not None and isinstance(state, (int, float)):
@@ -189,30 +167,18 @@ class LocaltuyaSensor(LocalTuyaEntity):
         if not self._device.is_connecting:
             self._last_state = self._state
 
-    def _update_integre_enerji(self, raw, scale_factor):
-        """Integrate power (W) over time into total kWh."""
-        now = time.time()
-        power_w = self._scaled_value(raw, scale_factor)
-
-        if (
-            power_w is not None
-            and self._last_sample_ts is not None
-            and self._power_w is not None
-            and not self._device.is_connecting
-        ):
-            dt_s = now - self._last_sample_ts
-            if 0 < dt_s <= MAX_INTEGRATION_GAP_S:
-                # Left Riemann: previous power over the elapsed interval
-                self._total += self._power_w * dt_s / WS_TO_KWH
-
-        if power_w is not None:
-            self._power_w = round(power_w, DEFAULT_PRECISION)
-            self._last_sample_ts = now
-            self._restored = True
-
-        self._state = round(self._total, DEFAULT_PRECISION)
-        if self._restored and not self._device.is_connecting:
-            self._last_state = self._state
+    def async_reset_energy(self):
+        """Reset accumulated energy total to zero."""
+        if not self._is_energy_mode:
+            return False
+        self._total = 0.0
+        self._last_raw = None
+        self._state = 0.0
+        self._last_state = 0.0
+        self._restored = True
+        self.schedule_update_ha_state()
+        self.debug("Energy total reset for %s", self.name)
+        return True
 
     # No need to push restored value back to the device for a sensor
     async def restore_state_when_connected(self):
