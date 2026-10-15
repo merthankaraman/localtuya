@@ -85,6 +85,15 @@ CONF_FAN_DPS_TYPE = "fan_dps_type"
 
 # sensor
 CONF_SCALING = "scaling"
+CONF_SENSOR_MODE = "sensor_mode"
+SENSOR_MODE_NONE = "(none)"
+SENSOR_MODE_ENERJI = "enerji"
+SENSOR_MODE_INTEGRE_ENERJI = "integre enerji"
+SENSOR_MODES = [
+    SENSOR_MODE_NONE,
+    SENSOR_MODE_ENERJI,
+    SENSOR_MODE_INTEGRE_ENERJI,
+]
 
 # climate
 CONF_TARGET_TEMPERATURE_DP = "target_temperature_dp"

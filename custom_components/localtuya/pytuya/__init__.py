@@ -164,7 +164,7 @@ NO_PROTOCOL_HEADER_CMDS = [
 HEARTBEAT_INTERVAL = 10
 
 # DPS that are known to be safe to use with update_dps (0x12) command
-UPDATE_DPS_WHITELIST = [18, 19, 20]  # Socket (Wi-Fi)
+UPDATE_DPS_WHITELIST = [17, 18, 19, 20]  # Socket (Wi-Fi): add_ele, current, power, voltage
 
 # Tuya Device Dictionary - Command and Payload Overrides
 # This is intended to match requests.json payload at

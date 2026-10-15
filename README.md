@@ -137,6 +137,23 @@ You can obtain Energy monitoring (voltage, current) in two different ways:
   Note:  these values are already divided by 10 for Voltage and Consumption
 3) On some devices, you may find that the energy values are not updating frequently enough by default. If so, set the scan interval (see above) to an appropriate value. Settings below 10 seconds may cause stability issues, 30 seconds is recommended.
 
+## Local energy sensors (kWh without HA Integration helper)
+
+Smart plugs often expose `add_ele` (typically DP **17**) as a short-lived increment meant for the cloud. LocalTuya can turn this into a usable local kWh total, and can also integrate power locally:
+
+| Sensor Mode | Typical DP | Scaling | Friendly name suggestion | Behaviour |
+|-------------|------------|---------|--------------------------|-----------|
+| `enerji` | 17 (`add_ele`) | `0.01` (sometimes `0.001`) | Enerji | Accumulates positive pulses into total kWh |
+| `integre enerji` | 19 (power) | `0.1` | Integre Enerji | Integrates W over time into kWh inside LocalTuya |
+
+Setup tips:
+
+* Add Manual DPS `17` if it is not discovered; use scan interval ~30s; RESET DPIDs can be `17,18,19,20`.
+* Close the Tuya app while LocalTuya is connected (do not remove the device from the app).
+* If the plug is fully offline, DP 17 may stall; **integre enerji** remains the reliable local kWh source.
+* Totals are restored after Home Assistant restarts (`total_increasing` / Energy dashboard compatible).
+* Instantaneous power for `integre enerji` is also exposed as the `power` attribute.
+
 ```yaml
        sensor:
          - platform: template

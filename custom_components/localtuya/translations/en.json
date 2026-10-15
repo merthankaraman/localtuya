@@ -136,6 +136,7 @@
                     "unit_of_measurement": "Unit of Measurement",
                     "device_class": "Device Class",
                     "scaling": "Scaling Factor",
+                    "sensor_mode": "Sensor Mode ((none), enerji=add_ele accumulate, integre enerji=power integration)",
                     "state_on": "On Value",
                     "state_off": "Off Value",
                     "powergo_dp": "Power DP (Usually 25 or 2)",
