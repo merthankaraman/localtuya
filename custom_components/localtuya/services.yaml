@@ -15,7 +15,7 @@ set_dp:
       example: False
 
 reset_energy:
-  description: Reset accumulated local energy (sensor mode enerji) to zero
+  description: Reset accumulated local energy (add_ele sensor) to zero
   fields:
     entity_id:
       description: Energy sensor entity_id to reset

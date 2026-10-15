@@ -13,11 +13,10 @@ from homeassistant.const import (
 from .common import LocalTuyaEntity, async_setup_entry
 from .const import (
     ATTR_STATE,
+    CONF_IS_ADD_ELE,
     CONF_SCALING,
     CONF_SENSOR_MODE,
     SENSOR_MODE_ENERJI,
-    SENSOR_MODE_NONE,
-    SENSOR_MODES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ def flow_schema(dps):
         vol.Optional(CONF_SCALING): vol.All(
             vol.Coerce(float), vol.Range(min=-1000000.0, max=1000000.0)
         ),
-        vol.Optional(CONF_SENSOR_MODE, default=SENSOR_MODE_NONE): vol.In(SENSOR_MODES),
+        vol.Optional(CONF_IS_ADD_ELE, default=False): bool,
     }
 
 
@@ -55,14 +54,12 @@ class LocaltuyaSensor(LocalTuyaEntity):
         self._restored = False
 
     @property
-    def _sensor_mode(self):
-        """Return configured sensor mode."""
-        return self._config.get(CONF_SENSOR_MODE, SENSOR_MODE_NONE)
-
-    @property
     def _is_energy_mode(self):
-        """Return True if this sensor accumulates energy."""
-        return self._sensor_mode == SENSOR_MODE_ENERJI
+        """Return True if this sensor accumulates add_ele pulses."""
+        if CONF_IS_ADD_ELE in self._config:
+            return bool(self._config.get(CONF_IS_ADD_ELE))
+        # Backward compatibility with earlier sensor_mode=enerji configs
+        return self._config.get(CONF_SENSOR_MODE) == SENSOR_MODE_ENERJI
 
     @property
     def state(self):
@@ -130,7 +127,7 @@ class LocaltuyaSensor(LocalTuyaEntity):
         state = self.dps(self._dp_id)
         scale_factor = self._config.get(CONF_SCALING)
 
-        if self._sensor_mode == SENSOR_MODE_ENERJI:
+        if self._is_energy_mode:
             self._update_enerji(state, scale_factor)
             return
 

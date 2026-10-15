@@ -85,13 +85,10 @@ CONF_FAN_DPS_TYPE = "fan_dps_type"
 
 # sensor
 CONF_SCALING = "scaling"
+CONF_IS_ADD_ELE = "is_add_ele"
+# Legacy key kept for existing configs created as sensor_mode=enerji
 CONF_SENSOR_MODE = "sensor_mode"
-SENSOR_MODE_NONE = "(none)"
 SENSOR_MODE_ENERJI = "enerji"
-SENSOR_MODES = [
-    SENSOR_MODE_NONE,
-    SENSOR_MODE_ENERJI,
-]
 
 # climate
 CONF_TARGET_TEMPERATURE_DP = "target_temperature_dp"

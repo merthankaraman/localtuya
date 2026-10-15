@@ -105,7 +105,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
         await device.set_dp(event.data[CONF_VALUE], event.data[CONF_DP])
 
     async def _handle_reset_energy(call):
-        """Reset accumulated enerji-mode sensor total to zero."""
+        """Reset accumulated add_ele sensor total to zero."""
         entity_id = call.data[ATTR_ENTITY_ID]
         for device in hass.data[DOMAIN][TUYA_DEVICES].values():
             for entity in device._entities:
@@ -114,7 +114,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
                 reset = getattr(entity, "async_reset_energy", None)
                 if reset is None or not reset():
                     raise HomeAssistantError(
-                        f"{entity_id} is not an enerji-mode LocalTuya sensor"
+                        f"{entity_id} is not an add_ele LocalTuya sensor"
                     )
                 return
         raise HomeAssistantError(f"unknown LocalTuya entity id: {entity_id}")

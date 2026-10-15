@@ -139,14 +139,11 @@ You can obtain Energy monitoring (voltage, current) in two different ways:
 
 ## Local energy sensor (`add_ele`)
 
-Smart plugs often expose `add_ele` (typically DP **17**) as an increment meant for the cloud. With sensor mode **`enerji`**, LocalTuya accumulates those pulses into a local kWh total.
-
-| Sensor Mode | Typical DP | Scaling | Behaviour |
-|-------------|------------|---------|-----------|
-| `enerji` | 17 (`add_ele`) | often `0.001` (Wh→kWh); some devices use `0.01` | Accumulates positive pulses into total kWh |
+Smart plugs often expose `add_ele` (typically DP **17**) as an increment meant for the cloud. Enable **This is add_ele DP** on that sensor to accumulate pulses into a local kWh total.
 
 Setup tips:
 
+* Typical DP: **17**; scaling often `0.001` (Wh→kWh), some devices use `0.01`.
 * Add Manual DPS `17` if it is not discovered; use scan interval ~30s; RESET DPIDs can be `17,18,19,20`.
 * Close the Tuya app while LocalTuya is connected (do not remove the device from the app).
 * Totals are restored after Home Assistant restarts (`total_increasing` / Energy dashboard compatible).
