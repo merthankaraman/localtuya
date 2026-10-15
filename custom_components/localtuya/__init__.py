@@ -71,6 +71,14 @@ SERVICE_RESET_ENERGY_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SET_ENERGY = "set_energy"
+SERVICE_SET_ENERGY_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(CONF_VALUE): vol.Coerce(float),
+    }
+)
+
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the LocalTuya integration component."""
@@ -104,20 +112,37 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
         await device.set_dp(event.data[CONF_VALUE], event.data[CONF_DP])
 
+    def _find_energy_sensor(entity_id):
+        """Return add_ele LocalTuya sensor entity or None."""
+        for device in hass.data[DOMAIN][TUYA_DEVICES].values():
+            for entity in device._entities:
+                if getattr(entity, "entity_id", None) == entity_id:
+                    return entity
+        return None
+
     async def _handle_reset_energy(call):
         """Reset accumulated add_ele sensor total to zero."""
         entity_id = call.data[ATTR_ENTITY_ID]
-        for device in hass.data[DOMAIN][TUYA_DEVICES].values():
-            for entity in device._entities:
-                if getattr(entity, "entity_id", None) != entity_id:
-                    continue
-                reset = getattr(entity, "async_reset_energy", None)
-                if reset is None or not reset():
-                    raise HomeAssistantError(
-                        f"{entity_id} is not an add_ele LocalTuya sensor"
-                    )
-                return
-        raise HomeAssistantError(f"unknown LocalTuya entity id: {entity_id}")
+        entity = _find_energy_sensor(entity_id)
+        if entity is None:
+            raise HomeAssistantError(f"unknown LocalTuya entity id: {entity_id}")
+        reset = getattr(entity, "async_reset_energy", None)
+        if reset is None or not reset():
+            raise HomeAssistantError(
+                f"{entity_id} is not an add_ele LocalTuya sensor"
+            )
+
+    async def _handle_set_energy(call):
+        """Set accumulated add_ele sensor total to a kWh value."""
+        entity_id = call.data[ATTR_ENTITY_ID]
+        entity = _find_energy_sensor(entity_id)
+        if entity is None:
+            raise HomeAssistantError(f"unknown LocalTuya entity id: {entity_id}")
+        setter = getattr(entity, "async_set_energy", None)
+        if setter is None or not setter(call.data[CONF_VALUE]):
+            raise HomeAssistantError(
+                f"{entity_id} is not an add_ele LocalTuya sensor"
+            )
 
     def _device_discovered(device):
         """Update address of device if it has changed."""
@@ -201,6 +226,12 @@ async def async_setup(hass: HomeAssistant, config: dict):
         SERVICE_RESET_ENERGY,
         _handle_reset_energy,
         schema=SERVICE_RESET_ENERGY_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_ENERGY,
+        _handle_set_energy,
+        schema=SERVICE_SET_ENERGY_SCHEMA,
     )
 
     discovery = TuyaDiscovery(_device_discovered)

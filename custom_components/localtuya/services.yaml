@@ -20,3 +20,13 @@ reset_energy:
     entity_id:
       description: Energy sensor entity_id to reset
       example: sensor.merthan_oda_ana_priz_enerji
+
+set_energy:
+  description: Set accumulated local energy (add_ele sensor) to a starting kWh value
+  fields:
+    entity_id:
+      description: Energy sensor entity_id to update
+      example: sensor.merthan_oda_ana_priz_enerji
+    value:
+      description: Energy total in kWh
+      example: 12.5

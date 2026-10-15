@@ -164,18 +164,28 @@ class LocaltuyaSensor(LocalTuyaEntity):
         if not self._device.is_connecting:
             self._last_state = self._state
 
-    def async_reset_energy(self):
-        """Reset accumulated energy total to zero."""
+    def async_set_energy(self, value):
+        """Set accumulated energy total to a specific kWh value."""
         if not self._is_energy_mode:
             return False
-        self._total = 0.0
+        try:
+            total = float(value)
+        except (TypeError, ValueError):
+            return False
+        if total < 0:
+            return False
+        self._total = total
         self._last_raw = None
-        self._state = 0.0
-        self._last_state = 0.0
+        self._state = round(self._total, DEFAULT_PRECISION)
+        self._last_state = self._state
         self._restored = True
         self.schedule_update_ha_state()
-        self.debug("Energy total reset for %s", self.name)
+        self.debug("Energy total set for %s: %s", self.name, self._state)
         return True
+
+    def async_reset_energy(self):
+        """Reset accumulated energy total to zero."""
+        return self.async_set_energy(0)
 
     # No need to push restored value back to the device for a sensor
     async def restore_state_when_connected(self):

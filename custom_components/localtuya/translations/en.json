@@ -243,6 +243,20 @@
                     "description": "Energy sensor entity_id to reset"
                 }
             }
+        },
+        "set_energy": {
+            "name": "Set energy",
+            "description": "Set accumulated local energy (add_ele sensor) to a starting kWh value",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity",
+                    "description": "Energy sensor entity_id to update"
+                },
+                "value": {
+                    "name": "Value",
+                    "description": "Energy total in kWh"
+                }
+            }
         }
     },
     "title": "LocalTuya"

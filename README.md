@@ -148,6 +148,7 @@ Setup tips:
 * Close the Tuya app while LocalTuya is connected (do not remove the device from the app).
 * Totals are restored after Home Assistant restarts (`total_increasing` / Energy dashboard compatible).
 * To clear the accumulated total, call service `localtuya.reset_energy` with the sensor `entity_id`.
+* To set a starting kWh value, call service `localtuya.set_energy` with `entity_id` and `value`.
 
 ```yaml
        sensor:
