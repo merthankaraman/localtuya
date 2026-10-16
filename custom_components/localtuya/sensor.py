@@ -3,7 +3,13 @@ import logging
 from functools import partial
 
 import voluptuous as vol
-from homeassistant.components.sensor import DEVICE_CLASSES, DOMAIN
+from homeassistant.components.sensor import (
+    DEVICE_CLASSES,
+    DOMAIN,
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_UNIT_OF_MEASUREMENT,
@@ -36,7 +42,7 @@ def flow_schema(dps):
     }
 
 
-class LocaltuyaSensor(LocalTuyaEntity):
+class LocaltuyaSensor(LocalTuyaEntity, SensorEntity):
     """Representation of a Tuya sensor."""
 
     def __init__(
@@ -63,30 +69,28 @@ class LocaltuyaSensor(LocalTuyaEntity):
         return self._config.get(CONF_SENSOR_MODE) == SENSOR_MODE_ENERJI
 
     @property
-    def state(self):
+    def native_value(self):
         """Return sensor state."""
         return self._state
 
     @property
     def device_class(self):
         """Return the class of this device."""
-        if self._is_energy_mode:
-            configured = self._config.get(CONF_DEVICE_CLASS)
-            return configured or "energy"
         return self._config.get(CONF_DEVICE_CLASS)
 
     @property
     def state_class(self):
-        """Return state class for energy dashboard compatibility."""
-        if self._is_energy_mode:
-            return "total_increasing"
+        """Add Energy-dashboard state_class from selected device_class."""
+        device_class = self._config.get(CONF_DEVICE_CLASS)
+        if device_class in (SensorDeviceClass.ENERGY, "energy"):
+            return SensorStateClass.TOTAL_INCREASING
+        if device_class in (SensorDeviceClass.POWER, "power"):
+            return SensorStateClass.MEASUREMENT
         return None
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         """Return the unit of measurement of this entity, if any."""
-        if self._is_energy_mode:
-            return self._config.get(CONF_UNIT_OF_MEASUREMENT) or "kWh"
         return self._config.get(CONF_UNIT_OF_MEASUREMENT)
 
     @property
