@@ -194,10 +194,21 @@ def platform_schema(platform, dps_strings, allow_id=True, yaml=False):
     return vol.Schema(schema).extend(flow_schema(platform, dps_strings))
 
 
+def _load_platform_modules():
+    """Import platform modules once at load time (avoid blocking import in the loop)."""
+    integration_module = ".".join(__name__.split(".")[:-1])
+    return {
+        platform: import_module("." + platform, integration_module)
+        for platform in PLATFORMS
+    }
+
+
+_PLATFORM_MODULES = _load_platform_modules()
+
+
 def flow_schema(platform, dps_strings):
     """Return flow schema for a specific platform."""
-    integration_module = ".".join(__name__.split(".")[:-1])
-    return import_module("." + platform, integration_module).flow_schema(dps_strings)
+    return _PLATFORM_MODULES[platform].flow_schema(dps_strings)
 
 
 def strip_dps_values(user_input, dps_strings):
